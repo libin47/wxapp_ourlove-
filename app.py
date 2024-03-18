@@ -129,6 +129,11 @@ def set_love_day():
 @app.route('/coc', methods=['GET'])
 def coc_new_card():
     return render_template("index.html")
+
+@app.route('/edit', methods=['GET'])
+def coc_edit_card():
+    return render_template("edit.html")
+
 @app.route('/admin', methods=['GET'])
 def coc_admin():
     return render_template("admin.html")
