@@ -55,6 +55,25 @@ def find_all_data():
     return res
 
 
+def find_my_data(groupid, userid):
+    res = list(dicedb[ColGame].find())
+    # print(res)
+    result = []
+    for r in res:
+        if userid in r.keys() and groupid!=r['_id']:
+            result.append(r[userid])
+    res_group = list(dicedb[ColGame].find({"_id": groupid}))
+    if len(res_group) > 0:
+        res_group = res_group[0]
+        if userid in res_group.keys():
+            res_group = [res_group[userid]]
+        else:
+            res_group = []
+    else:
+        res_group = []
+    return {"user": result, "user_group": res_group}
+
+
 def update_all_data(data):
     for key in data.keys():
         res = list(dicedb[ColGame].find({"_id": key}))

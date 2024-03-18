@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, redirect
 from challenge import fun_add_mission_wait, fun_add_detail, fun_read_message, fun_complete_mission, fun_del_mission_wait, fun_deny_mission_wait, fun_add_mission
 from score import fun_score_change, fun_buy_card
 from note import fun_add_note, fun_update_moon
@@ -6,10 +6,11 @@ from home import fun_add_home, fun_add_user, fun_set_love_day
 from login import fun_login
 from search_data import fun_find_data
 import json
-
-from wechatbot import fun_add_user, find_all_user, update_onel_user, find_all_data, update_all_data
+from flask_cors import *
+from wechatbot import fun_add_user, find_all_user, update_onel_user, find_all_data, update_all_data, find_my_data
 
 app = Flask(__name__)
+CORS(app, supports_credentials=True)
 
 # 读取参数
 def load_arg(request):
@@ -136,9 +137,9 @@ def api_coc_new_card():
     arg = load_arg(request)
     result = fun_add_user(arg)
     if result:
-        return jsonify(({"ok": True, "data": "aaaaaaaaaaaa"}))
+        return jsonify({"ok": True, "data": "aaaaaaaaaaaa"})
     else:
-        return jsonify(({"ok": False, "data": "aaaaaaaaaaaa"}))
+        return jsonify({"ok": False, "data": "aaaaaaaaaaaa"})
 
 @app.route('/api/get_all_user', methods=['POST'])
 def api_coc_all_user():
@@ -147,10 +148,19 @@ def api_coc_all_user():
     result = find_all_user(group)
     return jsonify(({"data": result}))
 
+
 @app.route('/api/get_all_data', methods=['GET'])
 def api_coc_get_all_data():
     result = find_all_data()
     return jsonify(({"data": result}))
+
+@app.route('/api/get_my_data', methods=['POST'])
+def api_coc_get_my_data():
+    arg = load_arg(request)
+    user = arg["user"]
+    group = arg['group']
+    result = find_my_data(group, user)
+    return jsonify({"data": result})
 
 @app.route('/api/coc_update_user', methods=['POST'])
 def api_coc_update_user():
@@ -164,6 +174,11 @@ def api_coc_update_all_data():
     result = update_all_data(arg)
     return jsonify(({"ok": result}))
 
+
+@app.route('/_next/<path:subpath>')
+def get_redirect(subpath):
+    print("重定向！")
+    return redirect('/static/_next/'+subpath, code=302, Response=None)
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=7684)
