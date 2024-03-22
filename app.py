@@ -185,5 +185,6 @@ def get_redirect(subpath):
     print("重定向！")
     return redirect('/static/_next/'+subpath, code=302, Response=None)
 
+
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=7684)

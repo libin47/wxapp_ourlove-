@@ -7,8 +7,9 @@ def check():
     index = text.find("static/_next")
     return index
 
+
 def html_rp():
-    l = ["templates/index.html","templates/admin.html","templates/edit.html"]
+    l = ["templates/index.html","templates/admin.html","templates/edit.html","templates/welcome.html"]
     for file in l:
         with open(file, "r", encoding="utf8") as f:
             text = f.read()
