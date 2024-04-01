@@ -74,6 +74,16 @@ def find_my_data(groupid, userid):
     return {"user": result, "user_group": res_group}
 
 
+def find_tem_data():
+    res = list(dicedb[ColGame].find({"_id": "admin"}))
+    result = []
+    if len(res) > 0:
+        res = res[0]
+        for r in res.keys():
+            if type(res[r])==dict and "name" in res[r].keys():
+                result.append(res[r])
+    return result
+
 def update_all_data(data):
     for key in data.keys():
         res = list(dicedb[ColGame].find({"_id": key}))

@@ -7,7 +7,7 @@ from login import fun_login
 from search_data import fun_find_data
 import json
 from flask_cors import *
-from wechatbot import fun_add_user, find_all_user, update_onel_user, find_all_data, update_all_data, find_my_data
+from wechatbot import fun_add_user as fun_add_user_dic, find_all_user, update_onel_user, find_all_data, update_all_data, find_my_data, find_tem_data
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -140,7 +140,7 @@ def coc_admin():
 @app.route('/api/coc_new', methods=['POST'])
 def api_coc_new_card():
     arg = load_arg(request)
-    result = fun_add_user(arg)
+    result = fun_add_user_dic(arg)
     if result:
         return jsonify({"ok": True, "data": "aaaaaaaaaaaa"})
     else:
@@ -180,9 +180,16 @@ def api_coc_update_all_data():
     return jsonify(({"ok": result}))
 
 
+@app.route('/api/coc_get_tem_data', methods=['POST'])
+def api_coc_get_tem_data():
+    arg = load_arg(request)
+    result = find_tem_data()
+    return jsonify(({"data": result}))
+
+
 @app.route('/_next/<path:subpath>')
 def get_redirect(subpath):
-    print("重定向！")
+    # print("重定向！")
     return redirect('/static/_next/'+subpath, code=302, Response=None)
 
 
