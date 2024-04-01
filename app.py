@@ -7,7 +7,10 @@ from login import fun_login
 from search_data import fun_find_data
 import json
 from flask_cors import *
-from wechatbot import fun_add_user as fun_add_user_dic, find_all_user, update_onel_user, find_all_data, update_all_data, find_my_data, find_tem_data
+from wechatbot import fun_add_user as fun_add_user_dic, \
+    find_all_user, update_onel_user, \
+    find_all_data, update_all_data, find_my_data, \
+    find_tem_data, del_pc_other
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -186,7 +189,13 @@ def api_coc_get_tem_data():
     result = find_tem_data()
     return jsonify(({"data": result}))
 
-
+@app.route('/api/coc_del_other', methods=['POST'])
+def api_coc_del_other():
+    arg = load_arg(request)
+    user = arg["user"]
+    group = arg['group']
+    result = del_pc_other(group, user)
+    return jsonify(({"ok": result}))
 @app.route('/_next/<path:subpath>')
 def get_redirect(subpath):
     # print("重定向！")

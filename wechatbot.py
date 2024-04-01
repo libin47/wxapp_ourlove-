@@ -102,3 +102,14 @@ def update_all_data(data):
             indata['_id'] = key
             dicedb[ColGame].insert_one(indata)
     return True
+
+def del_pc_other(groupid, userid):
+    res = list(dicedb[ColGame].find())
+
+    for r in res:
+        if userid in r.keys() and groupid!=r['_id']:
+            result = r
+            del result[userid]
+            dicedb[ColGame].replace_one({"_id": result['_id']}, result)
+
+    return True
