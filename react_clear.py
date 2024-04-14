@@ -9,7 +9,7 @@ def check():
 
 
 def html_rp():
-    l = ["templates/index.html","templates/admin.html","templates/edit.html","templates/welcome.html"]
+    l = ["templates/index.html","templates/admin.html","templates/self.html", "templates/welcome.html","templates/show.html"]
     for file in l:
         with open(file, "r", encoding="utf8") as f:
             text = f.read()

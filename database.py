@@ -17,3 +17,6 @@ ColUser = "user"
 
 dicedb = myclient["COC"]
 ColGame = "COC"
+ColGroup = "group"
+ColUser = "user"
+ColPc = "pc_card"

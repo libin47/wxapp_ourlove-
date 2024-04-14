@@ -1,7 +1,7 @@
 from database import mydb, ColChallenge, ColChallengeDetail, ColChallengeDemo, ColChallengeWait, ColHome, ColHomeMembers
 import time
 import pymongo
-from score import fun_score_change
+from app.ourlove.score import fun_score_change
 
 def fun_add_mission(arg):
     open_id = arg["open_id"]
@@ -69,7 +69,7 @@ def fun_add_mission_wait(arg):
     
     res = list(mydb[ColHomeMembers].find({"home_name": homeid}))
     if res[0]["members"][0] != arg['people'] and res[0]["members"][1] != arg['people']:
-        return false
+        return False
     
     # 个人任务直接创建，对方的需要审核
     if alone_mission and doitpeople[0]==open_id:
