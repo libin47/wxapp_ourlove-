@@ -1,14 +1,15 @@
-from flask import Flask, request, jsonify, render_template, redirect
+from flask import Flask, request, jsonify, render_template, redirect, Blueprint
 from util import load_arg
 from flask_cors import *
-
-from app import create
-
+from app.ourlove import app as app_api
+from app.wedice import wedice
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
-app.register_blueprint(create(), url_prefix="/")
-
+# app.register_blueprint(create(), url_prefix="/")
+# bp = Blueprint("ourlove", __name__)
+app.register_blueprint(app_api, url_prefix="/")
+app.register_blueprint(wedice, url_prefix="/api")
 
 # 下面是骰子用的
 @app.route('/coc', methods=['GET'])
