@@ -1,12 +1,29 @@
 from database import ColGroup, ColUser, ColPc, dicedb, ColGame
 from bson import ObjectId
 
+# 获取群组，没有则新建
+def _find_group(group):
+    res = list(dicedb[ColGroup].find({"_id": group}))
+    if len(res)==0:
+        dicedb[ColGroup].insert_one({
+            "_id": group,
+            "status": True,
+            "Gaming": "pause",
+            "card": {},
+            "group_card": [],
+            "config": {}
+        })
+        return list(dicedb[ColGroup].find({"_id": group}))[0]
+    else:
+        return res[0]
+
 # 新建卡
 def _add_card(userid, card):
     # 插入角色表
     if "_id" in card.keys():
         card.pop("_id")
     card['owner'] = userid
+    card["group"] = []
     pcid = dicedb[ColPc].insert_one(card)
     pcid = pcid.inserted_id
     # 更新用户表
@@ -27,21 +44,11 @@ def _add_tem_card(groupid, card):
     pcid = dicedb[ColPc].insert_one(card)
     pcid = pcid.inserted_id
     # 更新用户表
-    res = list(dicedb[ColGroup].find({"_id": groupid}))
-    if (len(res)) == 0:
-        dicedb[ColGroup].insert_one({
-            "_id": groupid,
-            "status": True,
-            "Gaming": "pause",
-            "card": {},
-            "group_card": [str(pcid)],
-            "config": {}
-        })
-    else:
-        card = res[0]["group_card"]
-        card.append(str(pcid))
-        dicedb[ColGroup].update_one({"_id": groupid}, {"$set": {"group_card": card}})
-    dicedb[ColPc].update_one({"_id": ObjectId(pcid)}, {"$set": {"group": groupid}})
+    res_group = _find_group(groupid)
+    card = res_group["group_card"]
+    card.append(str(pcid))
+    dicedb[ColGroup].update_one({"_id": groupid}, {"$set": {"group_card": card}})
+    dicedb[ColPc].update_one({"_id": ObjectId(pcid)}, {"$set": {"group": [groupid]}})
     return True
 
 
@@ -81,23 +88,53 @@ def _find_card(pcid):
     else:
         return {}
 
+# 关联卡
+def _link_card(group, wxid, cardid):
+    res_group = _find_group(group)
+    cards = res_group["card"]
+    if wxid in cards.keys() and cards[wxid]:
+        cardid_old = cards[wxid]
+        _unlink_card(group, wxid, cardid_old)
+        return _link_card(group, wxid, cardid)
+    else:
+        card = _find_card(cardid)
+        if card.keys():
+            groups = card["group"] if "group" in card.keys() else []
+            if type(groups)==str:
+                groups = [groups]
+            groups.append(group)
+            dicedb[ColPc].update_one({"_id": ObjectId(cardid)},{"$set": {"group": groups}})
+            cards[wxid] = cardid
+            dicedb[ColGroup].update_one({"_id": group}, {"$set" : {"card": cards}})
+            return True
+        else:
+            return False
+
+
+# 取消关联卡
+def _unlink_card(group, wxid, cardid):
+    res_group = _find_group(group)
+    cards = res_group["card"]
+    if wxid in cards.keys() and cards[wxid]:
+        cards[wxid] = ""
+        dicedb[ColGroup].update_one({"_id": group}, {"$set" : {"card": cards}})
+    res_card = _find_card(cardid)
+    if res_card.keys():
+        groups = res_card["group"] if "group"in res_card.keys() else []
+        if type(groups) == str:
+            groups = [groups]
+        groups.remove(group)
+        dicedb[ColPc].update_one({"_id": ObjectId(cardid)}, {"$set" : {"group": groups}})
+    return True
+
+
 
 # 群组设置
 def fun_group_config(data):
     groupid = data["group"]
     config = data["config"]
-    res = list(dicedb[ColGroup].find({"_id": groupid}))
-    if len(res)==0:
-        dicedb[ColGroup].insert_one({
-            "_id": groupid,
-            "status": True,
-            "Gaming": "pause",
-            "card": {},
-            "group_card": [],
-            "config": config
-        })
-    else:
-        dicedb[ColGroup].update_one({"_id": groupid}, {"$set": {"config": config}})
+    res = _find_group(groupid)
+    dicedb[ColGroup].update_one({"_id": groupid}, {"$set": {"config": config}})
     return True
 
 
@@ -105,18 +142,15 @@ def fun_group_status(data):
     groupid = data["group"]
     status = data["status"]
     Gaming = data["Gaming"]
-    result = dicedb[ColGroup].update_one({"_id": groupid}, {"$set": {"status": status, "Gaming": Gaming}})
+    res = _find_group(groupid)
+    dicedb[ColGroup].update_one({"_id": groupid}, {"$set": {"status": status, "Gaming": Gaming}})
     return True
 
 
 def fun_group_find_config(data):
     groupid = data["group"]
-    res = list(dicedb[ColGroup].find({"_id": groupid}))
-    if len(res)==0:
-        return False
-    else:
-        result = res[0]["config"]
-        return result
+    res = _find_group(groupid)
+    return res["config"]
 
 # 群组中
 # 新建卡：新建，关联群组
@@ -126,29 +160,8 @@ def fun_group_add_user(data):
     card = data['data']
     # 插入角色表
     pcid = _add_card(userid, card)
-    # 更新群组表
-    if groupid:
-        res = list(dicedb[ColGroup].find({"_id": groupid}))
-        if (len(res)) == 0:
-            dicedb[ColGroup].insert_one({
-                "_id": groupid,
-                "status": True,
-                "Gaming": "pause",
-                "card": {userid: pcid},
-                "group_card": [],
-                "config":{}
-            })
-        else:
-            card = res[0]["card"]
-            if userid in card.keys() and card[userid]!="":
-                try:
-                    dicedb[ColPc].update_one({"_id": ObjectId(card[userid])}, {"$set": {"group": ""}})
-                except:
-                    pass
-            card[userid] = pcid
-            dicedb[ColGroup].update_one({"_id": groupid}, { "$set": {"card": card}})
-        dicedb[ColPc].update_one({"_id": ObjectId(pcid)}, {"$set": {"group": groupid}})
-    return True
+    return _link_card(groupid, userid, pcid)
+
 
 
 # 新建群组的模板卡
@@ -162,15 +175,12 @@ def fun_group_add_tem_card(data):
 def fun_group_del_tem_card(data):
     groupid = data["group"]
     cardid = data['card_id']
-    res = list(dicedb[ColGroup].find({"_id": groupid}))
-    if (len(res)) == 0:
-        return False
-    else:
-        dicedb[ColPc].delete_one({"_id": ObjectId(cardid)})
-        card = res[0]["group_card"]
-        card.remove(cardid)
-        dicedb[ColGroup].update_one({"_id": groupid}, {"$set": {"group_card": card}})
-        return True
+    res = _find_group(groupid)
+    dicedb[ColPc].delete_one({"_id": ObjectId(cardid)})
+    card = res["group_card"]
+    card.remove(cardid)
+    dicedb[ColGroup].update_one({"_id": groupid}, {"$set": {"group_card": card}})
+    return True
 
 
 # 更新卡：更新
@@ -183,53 +193,47 @@ def fun_group_update_user(data):
 # 查询，所有内容
 def fun_find_group_all(data):
     groupid = data["group"]
-    res = list(dicedb[ColGroup].find({"_id": groupid}))
-    if len(res)>0:
-        result = res[0]
-        result['card'] = _find_cards(result['card'])
-        return result
-    else:
-        return False
-
+    result = _find_group(groupid)
+    result['card'] = _find_cards(result['card'])
+    return result
 
 # 查询状态
 def fun_find_group_status(data):
     groupid = data["group"]
-    res = list(dicedb[ColGroup].find({"_id": groupid}))
-    if len(res)>0:
-        res = res[0]
-        res.pop("_id")
-        return res
-    else:
-        return False
+    result = _find_group(groupid)
+    return result
 
 
 # 查询指定角色信息
 def fun_find_group_user(data):
     userid = data["user"]
     groupid = data["group"]
-    res = list(dicedb[ColGroup].find({"_id": groupid}))
-    if len(res)>0:
-        if userid in res[0]['card'].keys():
-            result = _find_card(res[0]['card'][userid])
-            return result
-        else:
-            return {}
+    res = _find_group(groupid)
+    if userid in res['card'].keys() and res['card'][userid]:
+        result = _find_card(res['card'][userid])
+        return result
     else:
-        return False
+        return {}
+
+
+# 链接一张卡
+def fun_link_group_user(data):
+    userid = data["user"]
+    card_id = data["card_id"]
+    groupid = data["group"]
+    return _link_card(groupid, userid, card_id)
 
 
 # 根据微信id查询所有卡
 def fun_find_user(data):
     userid = data["user"]
     groupid = data["group"]
-    res = list(dicedb[ColGroup].find({"_id": groupid}))
+    res = _find_group(groupid)
     result_group = {}
     group_card_id = ""
-    if len(res)>0:
-        if userid in res[0]['card'].keys():
-            group_card_id = res[0]['card'][userid]
-            result_group = _find_card(group_card_id)
+    if userid in res['card'].keys() and res['card'][userid]:
+        group_card_id = res['card'][userid]
+        result_group = _find_card(group_card_id)
     result_all = []
     res = list(dicedb[ColUser].find({"wxid": userid}))
     if len(res)>0:
@@ -248,22 +252,16 @@ def fun_find_one_card(data):
 # 查询所有模板卡
 def fun_find_group_tem_card(data):
     groupid = data["group"]
-    res = list(dicedb[ColGroup].find({"_id": groupid}))
-    if len(res)>0:
-        cardlist = res[0]["group_card"]
-        result1 = []
-        for pcid in cardlist:
-            result1.append(_find_card(pcid))
-    else:
-        result1 = []
-    res = list(dicedb[ColGroup].find({"_id": "admin"}))
-    if len(res)>0:
-        cardlist = res[0]["group_card"]
-        result2 = []
-        for pcid in cardlist:
-            result2.append(_find_card(pcid))
-    else:
-        result2 = []
+    result1 = []
+    res = _find_group(groupid)
+    cardlist = res["group_card"]
+    for pcid in cardlist:
+        result1.append(_find_card(pcid))
+    res = _find_group("admin")
+    result2 = []
+    cardlist = res["group_card"]
+    for pcid in cardlist:
+        result2.append(_find_card(pcid))
     return {"group": result1, "admin": result2}
 
 
@@ -307,22 +305,21 @@ def fun_self_del_user(data):
     if (len(res)) == 0:
         return False
     else:
+        wxid = res[0]["wxid"]
         # 组里取消关联
         pc = _find_card(cardid)
-        if 'group' in pc.keys() and pc['group']!="":
-            g = list(dicedb[ColGroup].find({"_id": pc['group']}))[0]
-            c = g['card']
-            for wxid in c.keys():
-                if c[wxid] == cardid:
-                    c.pop(wxid)
-            dicedb[ColGroup].update_one({"_id": pc['group']}, {"$set": {"card": c}})
-        # 删除数据
-        dicedb[ColPc].delete_one({"_id": ObjectId(cardid)})
-        # 更新个人关联
-        card = res[0]["pc"]
-        card.remove(cardid)
-        dicedb[ColUser].update_one({"_id": ObjectId(id)}, {"$set": {"pc": card}})
-        return True
+        if 'group' in pc.keys() and pc['group']:
+            for g in pc["group"]:
+                _unlink_card(g, wxid, cardid)
+            return fun_self_del_user(data)
+        else:
+            # 删除数据
+            dicedb[ColPc].delete_one({"_id": ObjectId(cardid)})
+            # 更新个人关联
+            card = res[0]["pc"]
+            card.remove(cardid)
+            dicedb[ColUser].update_one({"_id": ObjectId(id)}, {"$set": {"pc": card}})
+            return True
 
 
 # 通过wxid获取id

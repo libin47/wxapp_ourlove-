@@ -1,7 +1,7 @@
 from app.wedice.wechatbot import fun_group_add_user, fun_group_add_tem_card,fun_group_del_tem_card,fun_group_update_user,\
     fun_find_group_all,fun_find_group_status,fun_find_user,fun_find_group_tem_card,fun_self_add_user,\
     fun_self_update_user, fun_self_del_user,fun_self_find_id_by_wxid, fun_self_find_user, fun_group_config, fun_group_find_config,\
-    fun_find_one_card, trans_old, fun_group_status, fun_find_group_user
+    fun_find_one_card, trans_old, fun_group_status, fun_find_group_user, fun_link_group_user
 
 from util import load_arg, load_arg_get
 from flask import Blueprint
@@ -77,6 +77,11 @@ def api_coc_group_get_one():
     result = fun_find_group_user(arg)
     return jsonify({"data": result})
 
+@wedice.route('/coc_group_link_one', methods=['POST'])
+def api_coc_group_link_one():
+    arg = load_arg(request)
+    result = fun_link_group_user(arg)
+    return jsonify({"data": result})
 
 @wedice.route('/coc_group_get_user', methods=['POST'])
 def api_coc_group_get_user():
@@ -131,6 +136,13 @@ def api_coc_self_get_pc():
     arg = load_arg(request)
     result = fun_self_find_user(arg)
     return jsonify({"data": result})
+
+
+@wedice.route('/coc_group_link_pc', methods=['POST'])
+def api_coc_group_link_pc():
+    arg = load_arg(request)
+    result = fun_link_group_user(arg)
+    return jsonify({"ok": result})
 
 
 @wedice.route('/coc_trans_old', methods=['POST'])
