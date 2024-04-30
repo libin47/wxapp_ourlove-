@@ -68,23 +68,29 @@ def _update_card(card, card_id):
 def _find_cards(pc):
     result = {}
     for wxid in pc.keys():
-        res = list(dicedb[ColPc].find({"_id": ObjectId(pc[wxid])}))
-        if len(res)>0:
-            r = res[0]
-            r["_id"] = str(r["_id"])
-            result[wxid] = r
+        if pc[wxid]:
+            res = list(dicedb[ColPc].find({"_id": ObjectId(pc[wxid])}))
+            if len(res)>0:
+                r = res[0]
+                r["_id"] = str(r["_id"])
+                result[wxid] = r
+            else:
+                result[wxid] = {}
         else:
-            result[wxid] = {}
+            continue
     return result
 
 
 # 查询单卡
 def _find_card(pcid):
-    res = list(dicedb[ColPc].find({"_id": ObjectId(pcid)}))
-    if len(res)>0:
-        r = res[0]
-        r["_id"] = str(r["_id"])
-        return r
+    if pcid:
+        res = list(dicedb[ColPc].find({"_id": ObjectId(pcid)}))
+        if len(res)>0:
+            r = res[0]
+            r["_id"] = str(r["_id"])
+            return r
+        else:
+            return {}
     else:
         return {}
 
